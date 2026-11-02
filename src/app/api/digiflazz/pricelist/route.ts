@@ -5,21 +5,34 @@ import fetch from 'node-fetch';
 import { HttpProxyAgent } from 'hpagent';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // Mencegah build error saat prerender
 
 export async function GET() {
-  const username = process.env.DIGIFLAZZ_USERNAME;
-  const apiKey = process.env.DIGIFLAZZ_API_KEY;
-  // PAKSA JADI HTTP:// (Ganti https:// jika ada)
-  const proxyUrl = (process.env.FIXIE_URL || '').replace('https://', 'http://');
-  
-  if (!username || !apiKey || !proxyUrl) {
-    return NextResponse.json({ success: false, error: 'Variabel .env tidak lengkap' }, { status: 500 });
-  }
-
-  const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
-  const agent = new HttpProxyAgent({ proxy: proxyUrl });
-  
   try {
+    const username = process.env.DIGIFLAZZ_USERNAME;
+    const apiKey = process.env.DIGIFLAZZ_API_KEY;
+    let proxyUrl = process.env.FIXIE_URL || '';
+    
+    // Paksa ubah https ke http, dan pastikan tidak kosong
+    proxyUrl = proxyUrl.replace('https://', 'http://');
+    if (!proxyUrl.startsWith('http://')) {
+      return NextResponse.json({ success: false, error: 'URL Proxy tidak valid atau kosong' }, { status: 500 });
+    }
+    
+    if (!username || !apiKey) {
+      return NextResponse.json({ success: false, error: 'Username/API Key Digiflazz kosong' }, { status: 500 });
+    }
+
+    const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
+    
+    // Buat agent dengan aman
+    let agent;
+    try {
+      agent = new HttpProxyAgent({ proxy: proxyUrl });
+    } catch (e: any) {
+      return NextResponse.json({ success: false, error: `Format Proxy Salah: ${e.message}` }, { status: 500 });
+    }
+
     const res = await fetch('https://api.digiflazz.com/v1/price-list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
