@@ -3,10 +3,11 @@ import crypto from 'crypto';
 import { createClient } from '@/lib/supabase/server';
 import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { revalidateTag } from 'next/cache'; // Import fungsi revalidate
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Minta Vercel beri waktu 60 detik (jika didukung)
+export const maxDuration = 60;
 
 export async function GET() {
   try {
@@ -33,6 +34,7 @@ export async function GET() {
 
     const rawText = await res.text();
     let data: any;
+    
     try {
       data = JSON.parse(rawText);
     } catch (e) {
@@ -47,14 +49,12 @@ export async function GET() {
     const { data: existingProducts } = await supabase.from('products').select('buyer_sku_code');
     const existingCodes = new Set(existingProducts?.map(p => p.buyer_sku_code));
 
-    // Array untuk menampung data yang akan dimasukkan sekaligus
     const toUpdate = [];
     const toInsert = [];
 
     for (const p of data.data) {
       if (!p.buyer_product_status || !p.seller_product_status) continue;
 
-      // Penerjemah Kategori agar sinkron dengan Dashboard
       let mappedCategory = p.category;
       if (p.category === 'Games') mappedCategory = 'Game';
       if (p.category === 'E-Money') mappedCategory = 'E-Wallet';
@@ -64,7 +64,6 @@ export async function GET() {
       const basePrice = p.price;
 
       if (existingCodes.has(p.buyer_sku_code)) {
-        // Update harga modal, JANGAN sentuh sell_price
         toUpdate.push({
           buyer_sku_code: p.buyer_sku_code,
           product_name: p.product_name,
@@ -76,7 +75,6 @@ export async function GET() {
           is_active: true
         });
       } else {
-        // Insert produk baru
         toInsert.push({
           buyer_sku_code: p.buyer_sku_code,
           product_name: p.product_name,
@@ -84,7 +82,7 @@ export async function GET() {
           brand: p.brand,
           type: p.type,
           base_price: basePrice,
-          sell_price: basePrice + 1500, // Margin default
+          sell_price: basePrice + 1500,
           reseller_price: basePrice + 500,
           is_active: true,
           seller_name: p.seller_name,
@@ -92,21 +90,18 @@ export async function GET() {
       }
     }
 
-    // Eksekusi Bulk Upsert (Proses Cepat)
-    // Bagi menjadi potongan kecil (chunk) agar tidak ditolak Supabase (limit 1000 per request)
     const chunkSize = 500;
     
-    // 1. Proses Update
     for (let i = 0; i < toUpdate.length; i += chunkSize) {
-      const chunk = toUpdate.slice(i, i + chunkSize);
-      await supabase.from('products').upsert(chunk, { onConflict: 'buyer_sku_code' });
+      await supabase.from('products').upsert(toUpdate.slice(i, i + chunkSize), { onConflict: 'buyer_sku_code' });
     }
 
-    // 2. Proses Insert
     for (let i = 0; i < toInsert.length; i += chunkSize) {
-      const chunk = toInsert.slice(i, i + chunkSize);
-      await supabase.from('products').insert(chunk);
+      await supabase.from('products').insert(toInsert.slice(i, i + chunkSize));
     }
+
+    // MAGIC: Hapus cache lama agar user langsung melihat produk terbaru!
+    revalidateTag('products');
 
     return NextResponse.json({ success: true, count: toUpdate.length + toInsert.length });
   } catch (error: any) {
