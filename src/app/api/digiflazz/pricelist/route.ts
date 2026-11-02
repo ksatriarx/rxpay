@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@/lib/supabase/server';
 import fetch from 'node-fetch';
-import { HttpProxyAgent } from 'hpagent';
+import { HttpsProxyAgent } from 'hpagent'; // GANTI KE HTTPS
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,6 @@ export async function GET() {
     const username = process.env.DIGIFLAZZ_USERNAME;
     const apiKey = process.env.DIGIFLAZZ_API_KEY;
     
-    // JURUS PAKSA: Bersihkan spasi, hapus https/http, lalu paksa jadi http://
     let rawProxy = (process.env.FIXIE_URL || '').trim();
     let cleanProxy = rawProxy.replace(/^https?:\/\//i, ''); 
     let finalProxyUrl = `http://${cleanProxy}`;
@@ -23,8 +22,8 @@ export async function GET() {
 
     const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
     
-    // Gunakan URL yang sudah dijamin http://
-    const agent = new HttpProxyAgent({ proxy: finalProxyUrl });
+    // PAKAI HttpsProxyAgent
+    const agent = new HttpsProxyAgent({ proxy: finalProxyUrl });
 
     const res = await fetch('https://api.digiflazz.com/v1/price-list', {
       method: 'POST',
@@ -65,10 +64,9 @@ export async function GET() {
 
     return NextResponse.json({ success: true, count });
   } catch (error: any) {
-    // Jika masih error, tampilkan URL yang dipakai agar kita tahu
     return NextResponse.json({ 
       success: false, 
-      error: `Gagal Koneksi Proxy. URL yang dipakai: [${process.env.FIXIE_URL}] -> Diubah jadi: [http://${(process.env.FIXIE_URL || '').replace(/^https?:\/\//i, '')}]. Error asli: ${error.message}` 
+      error: `Gagal Koneksi Proxy: ${error.message}` 
     }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import fetch from 'node-fetch';
-import { HttpProxyAgent } from 'hpagent';
+import { HttpsProxyAgent } from 'hpagent'; // GANTI KE HTTPS
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,13 +11,11 @@ export async function GET() {
     const username = process.env.DIGIFLAZZ_USERNAME!;
     const apiKey = process.env.DIGIFLAZZ_API_KEY!;
     
-    let rawProxyUrl = (process.env.FIXIE_URL || '').trim();
-    let proxyUrl = rawProxyUrl.replace('https://', 'http://');
-    if (!proxyUrl.startsWith('http://')) {
-        proxyUrl = 'http://' + rawProxyUrl.replace(/^(https?:\/\/)?/, '');
-    }
-
-    const agent = new HttpProxyAgent({ proxy: proxyUrl });
+    let rawProxy = (process.env.FIXIE_URL || '').trim();
+    let cleanProxy = rawProxy.replace(/^https?:\/\//i, ''); 
+    let finalProxyUrl = `http://${cleanProxy}`;
+    
+    const agent = new HttpsProxyAgent({ proxy: finalProxyUrl });
     const sign = crypto.createHash('md5').update(`${username}${apiKey}depo`).digest('hex');
 
     const res = await fetch('https://api.digiflazz.com/v1/cek-saldo', {
