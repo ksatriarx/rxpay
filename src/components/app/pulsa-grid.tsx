@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { formatIDR } from '@/lib/utils';
-import { X, Smartphone, CheckCircle2, AlertCircle, Share2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { X, Smartphone, CheckCircle2, AlertCircle, Share2, Loader2 } from 'lucide-react';
 
 export default function PulsaGrid({ products }: { products: any[] }) {
   const [phone, setPhone] = useState('');
@@ -12,29 +11,20 @@ export default function PulsaGrid({ products }: { products: any[] }) {
   const [successTx, setSuccessTx] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
   
-  // Ambil daftar brand unik
   const brands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
 
-  // Logika Deteksi Operator
   useEffect(() => {
     const prefix = phone.substring(0, 4);
     if (!prefix) return;
     
-    // Telkomsel
     if (['0811','0812','0813','0821','0822','0823','0851','0852','0853'].some(p => prefix.startsWith(p))) setDetectedBrand('TELKOMSEL');
-    // Indosat
     else if (['0814','0815','0816','0855','0856','0857','0858'].some(p => prefix.startsWith(p))) setDetectedBrand('INDOSAT');
-    // XL
     else if (['0817','0818','0819','0859','0877','0878'].some(p => prefix.startsWith(p))) setDetectedBrand('XL');
-    // Axis
     else if (['0831','0832','0833','0838'].some(p => prefix.startsWith(p))) setDetectedBrand('AXIS');
-    // Tri
     else if (['0895','0896','0897','0898','0899'].some(p => prefix.startsWith(p))) setDetectedBrand('TRI');
-    // Smartfren
     else if (['0881','0882','0883','0884','0885','0886','0887','0888','0889'].some(p => prefix.startsWith(p))) setDetectedBrand('SMARTFREN');
   }, [phone]);
 
-  // Filter produk berdasarkan operator yang terdeteksi
   const filteredProducts = products.filter(p => p.brand === detectedBrand);
 
   const handleBuy = async () => {
@@ -42,24 +32,32 @@ export default function PulsaGrid({ products }: { products: any[] }) {
     setLoading(true);
     setErrorMsg('');
     
-    const res = await fetch('/api/transactions', {
-      method: 'POST',
-      body: JSON.stringify({ productId: selected.id, customerNo: phone })
-    });
-    const data = await res.json();
-    setLoading(false);
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, // Wajib ditambahkan
+        body: JSON.stringify({ productId: selected.id, customerNo: phone })
+      });
+      
+      const data = await res.json();
+      setLoading(false);
 
-    if (data.success) {
-      setSuccessTx(data.tx);
-      setPhone('');
-    } else {
-      setErrorMsg(data.error || 'Gagal memproses transaksi');
+      if (data.success) {
+        setSuccessTx(data.tx);
+        setPhone('');
+      } else {
+        // Jika gagal (misal saldo kurang), tampilkan pesan error
+        setErrorMsg(data.error || 'Gagal memproses transaksi');
+      }
+    } catch (err) {
+      // Jika server error / timeout, jangan biarkan tombol nyangkut
+      setLoading(false);
+      setErrorMsg('Terjadi kesalahan koneksi. Silakan coba lagi.');
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* INPUT NOMOR HP */}
       <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
         <label className="block text-sm font-bold text-slate-700 mb-2">Masukkan Nomor HP</label>
         <div className="relative">
@@ -79,7 +77,6 @@ export default function PulsaGrid({ products }: { products: any[] }) {
         )}
       </div>
 
-      {/* TAB OPERATOR (Bisa diklik manual jika deteksi gagal) */}
       <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
         {brands.map((brand) => (
           <button
@@ -96,7 +93,6 @@ export default function PulsaGrid({ products }: { products: any[] }) {
         ))}
       </div>
 
-      {/* GRID PRODUK (Minimalis) */}
       <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
         {filteredProducts.map((p) => (
           <div 
@@ -104,7 +100,10 @@ export default function PulsaGrid({ products }: { products: any[] }) {
             onClick={() => { setSelected(p); setErrorMsg(''); }} 
             className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm hover:border-brand transition-all cursor-pointer active:scale-95 flex flex-col items-center justify-center text-center"
           >
-            <p className="font-extrabold text-slate-800 text-sm">{p.product_name.replace(detectedBrand, '').trim()}</p>
+            {/* Hapus nama brand dari judul produk agar rapi (misal: Telkomsel 10.000 jadi 10.000) */}
+            <p className="font-extrabold text-slate-800 text-sm">
+              {p.product_name.replace(new RegExp(detectedBrand, 'gi'), '').replace('Telkomsel', '').trim()}
+            </p>
             <p className="font-bold text-brand text-xs mt-1">{formatIDR(p.sell_price)}</p>
           </div>
         ))}
@@ -114,11 +113,11 @@ export default function PulsaGrid({ products }: { products: any[] }) {
         <div className="text-center py-10 text-slate-500">Produk untuk operator ini belum tersedia.</div>
       )}
 
-      {/* MODAL KONFIRMASI & ERROR SALDO */}
+      {/* MODAL KONFIRMASI */}
       {selected && !successTx && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-end md:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 relative shadow-2xl">
-            <button onClick={() => setSelected(null)} className="absolute right-4 top-4 text-slate-400 p-2 bg-slate-100 rounded-full hover:bg-slate-200">
+            <button onClick={() => !loading && setSelected(null)} className="absolute right-4 top-4 text-slate-400 p-2 bg-slate-100 rounded-full hover:bg-slate-200">
               <X className="w-5 h-5" />
             </button>
             <p className="text-xs font-bold text-brand mb-1 uppercase">{selected.brand}</p>
@@ -126,6 +125,7 @@ export default function PulsaGrid({ products }: { products: any[] }) {
             <p className="text-brand font-bold text-xl mb-4">{formatIDR(selected.sell_price)}</p>
             <p className="text-sm font-semibold text-slate-600 mb-6">Tujuan: {phone || 'Belum diisi'}</p>
             
+            {/* TAMPILKAN ERROR JIKA SALDO KURANG / GAGAL */}
             {errorMsg && (
               <div className="bg-red-50 border border-red-200 p-3 rounded-xl mb-4">
                 <div className="flex items-center gap-2 text-red-600 font-bold text-sm mb-2">
@@ -140,8 +140,12 @@ export default function PulsaGrid({ products }: { products: any[] }) {
               </div>
             )}
             
-            <button onClick={handleBuy} disabled={loading || !phone} className="w-full py-3.5 bg-brand-gradient text-white font-bold rounded-xl disabled:opacity-50">
-              {loading ? 'Memproses...' : 'Konfirmasi & Bayar'}
+            <button onClick={handleBuy} disabled={loading || !phone} className="w-full py-3.5 bg-brand-gradient text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Memproses...</>
+              ) : (
+                'Konfirmasi & Bayar'
+              )}
             </button>
           </div>
         </div>
