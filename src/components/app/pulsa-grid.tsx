@@ -38,19 +38,28 @@ export default function PulsaGrid({ products }: { products: any[] }) {
         body: JSON.stringify({ productId: selected.id, customerNo: phone })
       });
       
-      const data = await res.json();
+      // BACA SEBAGAI TEKS DULU (Untuk deteksi jika Vercel mengirim HTML crash)
+      const rawText = await res.text();
+      let data;
+
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        // Jika bukan JSON, berarti server Vercel crash
+        throw new Error(`Server Crash (HTTP ${res.status}). Pesan: ${rawText.substring(0, 50)}...`);
+      }
+
       setLoading(false);
 
       if (data.success) {
         setSuccessTx(data.tx);
         setPhone('');
       } else {
-        // Tangkap pesan error asli dari backend (misal: "Saldo tidak mencukupi")
         setErrorMsg(data.error || 'Gagal memproses transaksi');
       }
-    } catch (err) {
+    } catch (err: any) {
       setLoading(false);
-      setErrorMsg('Koneksi terputus. Gagal menghubungi server.');
+      setErrorMsg(err.message || 'Koneksi terputus.');
     }
   };
 
