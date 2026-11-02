@@ -20,7 +20,9 @@ export async function GET() {
       body: JSON.stringify({ cmd: 'deposit', username, sign }),
       agent: agent as any,
     });
-    const data = await res.json();
+    
+    // PERBAIKAN: Tambahkan 'as any' di sini
+    const data = await res.json() as any;
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json({ error: 'Gagal menghubungi Digiflazz via proxy' }, { status: 500 });

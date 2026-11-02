@@ -25,7 +25,9 @@ export async function GET() {
       body: JSON.stringify({ cmd: 'prepaid', username, sign }),
       agent: agent as any,
     });
-    const data = await res.json();
+    
+    // PERBAIKAN: Tambahkan 'as any' di sini
+    const data = await res.json() as any;
     
     if (!data.data) {
       return NextResponse.json({ success: false, error: data.data || JSON.stringify(data) }, { status: 400 });
