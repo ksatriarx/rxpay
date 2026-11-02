@@ -1,13 +1,25 @@
 'use client';
 import { useState } from 'react';
 import { formatIDR } from '@/lib/utils';
-import { X } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 
 export default function ProductGrid({ products }: { products: any[] }) {
   const [selected, setSelected] = useState<any>(null);
   const [customerNo, setCustomerNo] = useState('');
   const [loading, setLoading] = useState(false);
   const [successTx, setSuccessTx] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeBrand, setActiveBrand] = useState('Semua');
+
+  // Ambil daftar brand unik untuk tab filter
+  const brands = ['Semua', ...Array.from(new Set(products.map(p => p.brand).filter(Boolean)))];
+
+  // Filter produk berdasarkan tab brand dan pencarian
+  const filteredProducts = products.filter(p => {
+    const matchBrand = activeBrand === 'Semua' || p.brand === activeBrand;
+    const matchSearch = p.product_name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchBrand && matchSearch;
+  });
 
   const handleBuy = async () => {
     if (!customerNo) return alert('Masukkan nomor tujuan / ID');
@@ -28,64 +40,97 @@ export default function ProductGrid({ products }: { products: any[] }) {
     }
   };
 
-  // Jika tidak ada produk
-  if (!products || products.length === 0) {
-    return <div className="text-slate-500 text-center py-10">Belum ada produk.</div>;
-  }
-
   return (
     <>
-      {/* Daftar Produk */}
+      {/* Kolom Pencarian */}
+      <div className="relative mb-6">
+        <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input 
+          type="text" 
+          placeholder="Cari produk (misal: Telkomsel 10.000)..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:border-brand outline-none shadow-sm"
+        />
+      </div>
+
+      {/* Tab Filter Brand */}
+      <div className="flex overflow-x-auto gap-2 pb-4 scrollbar-hide mb-2">
+        {brands.map((brand) => (
+          <button
+            key={brand}
+            onClick={() => setActiveBrand(brand)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+              activeBrand === brand 
+                ? 'bg-brand text-white shadow-md' 
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {brand}
+          </button>
+        ))}
+      </div>
+
+      {/* Grid Produk */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {products.map((p) => (
+        {filteredProducts.map((p) => (
           <div 
             key={p.id} 
-            onClick={() => {
-              alert(`Tombol Berfungsi! Anda memilih: ${p.product_name}`);
-              setSelected(p);
-            }} 
-            className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-500"
+            onClick={() => setSelected(p)} 
+            className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-brand transition-all cursor-pointer active:scale-95 flex flex-col justify-between"
           >
-            <p className="text-xs font-bold text-blue-600 mb-1">{p.category}</p>
-            <p className="font-bold text-slate-800 text-sm mb-2">{p.product_name}</p>
-            <p className="font-extrabold text-slate-900">{formatIDR(p.sell_price)}</p>
+            <div>
+              <p className="text-[10px] font-bold text-brand mb-1 uppercase tracking-wider">{p.brand}</p>
+              <p className="font-bold text-slate-800 text-sm mb-2 leading-tight">{p.product_name}</p>
+            </div>
+            <p className="font-extrabold text-slate-900 mt-2">{formatIDR(p.sell_price)}</p>
           </div>
         ))}
       </div>
 
-      {/* MODAL PEMBELIAN (Menggunakan gaya inline agar pasti muncul) */}
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-10 text-slate-500">
+          Produk tidak ditemukan.
+        </div>
+      )}
+
+      {/* Modal Pembelian */}
       {selected && !successTx && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '400px', position: 'relative' }}>
-            <button onClick={() => setSelected(null)} style={{ position: 'absolute', right: '16px', top: '16px', border: 'none', background: 'none' }}>
-              <X className="w-6 h-6 text-slate-500" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-end md:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 relative shadow-2xl">
+            <button onClick={() => setSelected(null)} className="absolute right-4 top-4 text-slate-400 p-2 bg-slate-100 rounded-full hover:bg-slate-200">
+              <X className="w-5 h-5" />
             </button>
+            <p className="text-xs font-bold text-brand mb-1 uppercase">{selected.brand}</p>
             <h3 className="font-bold text-lg mb-1">{selected.product_name}</h3>
-            <p className="text-blue-600 font-bold mb-4">{formatIDR(selected.sell_price)}</p>
+            <p className="text-brand font-bold text-xl mb-6">{formatIDR(selected.sell_price)}</p>
             
-            <label className="block text-sm font-medium text-slate-700 mb-2">Nomor Tujuan / ID</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Nomor Tujuan / ID Game</label>
             <input 
               type="text" 
               value={customerNo} 
               onChange={(e) => setCustomerNo(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 outline-none mb-4 text-lg"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none mb-6 text-lg font-semibold"
               placeholder="Contoh: 08123456789" 
             />
             
-            <button onClick={handleBuy} disabled={loading} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl">
-              {loading ? 'Memproses...' : 'Beli Sekarang'}
+            <button onClick={handleBuy} disabled={loading} className="w-full py-3.5 bg-brand-gradient text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand/30">
+              {loading ? 'Memproses...' : 'Konfirmasi Pembelian'}
             </button>
           </div>
         </div>
       )}
 
-      {/* MODAL SUKSES */}
+      {/* Modal Sukses */}
       {successTx && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-            <h3 className="font-bold text-lg text-green-600 mb-2">Transaksi Berhasil!</h3>
-            <p className="text-slate-600 mb-4">SN: {successTx.serial_number}</p>
-            <button onClick={() => { setSuccessTx(null); setSelected(null); }} className="w-full py-3 bg-slate-200 text-slate-800 font-bold rounded-xl">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 text-center shadow-2xl">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">✅</span>
+            </div>
+            <h3 className="font-bold text-lg text-slate-800 mb-2">Transaksi Berhasil!</h3>
+            <p className="text-slate-500 text-sm mb-6">SN: {successTx.serial_number}</p>
+            <button onClick={() => { setSuccessTx(null); setSelected(null); }} className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl">
               Tutup
             </button>
           </div>
