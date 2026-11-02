@@ -12,8 +12,10 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "clsx": "^2.1.1",
+    "hpagent": "^1.2.0",
     "lucide-react": "^0.460.0",
     "next": "14.2.15",
+    "node-fetch": "^3.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.5.4"
