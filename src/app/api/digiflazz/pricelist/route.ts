@@ -11,19 +11,30 @@ export async function GET() {
   try {
     const username = process.env.DIGIFLAZZ_USERNAME;
     const apiKey = process.env.DIGIFLAZZ_API_KEY;
-    const fixieUrl = process.env.FIXIE_URL;
+    const rawProxy = process.env.FIXIE_URL || '';
 
-    if (!username || !apiKey || !fixieUrl) {
+    if (!username || !apiKey || !rawProxy) {
       return NextResponse.json({ success: false, error: 'Variabel .env tidak lengkap' }, { status: 500 });
     }
 
-    // Parse URL proxy dengan aman untuk menangani karakter khusus
-    const parsedUrl = new URL(fixieUrl.startsWith('http') ? fixieUrl : `http://${fixieUrl}`);
-    const proxyAgentUrl = `http://${encodeURIComponent(parsedUrl.username)}:${encodeURIComponent(parsedUrl.password)}@${parsedUrl.hostname}:${parsedUrl.port}`;
+    // PARSER MANUAL: Memisahkan auth dan host tanpa merusak karakter khusus
+    let cleanProxy = rawProxy.trim().replace(/^https?:\/\//i, '');
+    let proxyOptions: any = {};
+    const atIndex = cleanProxy.lastIndexOf('@');
     
-    const agent = new HttpsProxyAgent(proxyAgentUrl);
+    if (atIndex !== -1) {
+      const auth = cleanProxy.substring(0, atIndex);
+      const hostPort = cleanProxy.substring(atIndex + 1);
+      const [host, port] = hostPort.split(':');
+      proxyOptions = { host, port: parseInt(port || '80', 10), auth };
+    } else {
+      const [host, port] = cleanProxy.split(':');
+      proxyOptions = { host, port: parseInt(port || '80', 10) };
+    }
 
+    const agent = new HttpsProxyAgent(proxyOptions);
     const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
+
     const res = await fetch('https://api.digiflazz.com/v1/price-list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
