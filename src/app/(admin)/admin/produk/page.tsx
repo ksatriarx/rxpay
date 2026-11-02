@@ -8,10 +8,10 @@ export default function AdminProdukPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   
-  // State untuk Sinkronisasi
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle'|'success'|'error'>('idle');
   const [syncCount, setSyncCount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const supabase = createClient();
 
@@ -27,12 +27,7 @@ export default function AdminProdukPage() {
     if (isNaN(price) || price <= 0) return alert('Harga tidak valid');
     
     setLoadingId(id);
-    
-    const { error } = await supabase
-      .from('products')
-      .update({ sell_price: price })
-      .eq('id', id);
-      
+    const { error } = await supabase.from('products').update({ sell_price: price }).eq('id', id);
     setLoadingId(null);
 
     if (error) {
@@ -46,18 +41,23 @@ export default function AdminProdukPage() {
   const syncProducts = async () => {
     setSyncing(true);
     setSyncStatus('idle');
+    setErrorMessage('');
     try {
       const res = await fetch('/api/digiflazz/pricelist');
       const data = await res.json();
       if (data.success) {
         setSyncStatus('success');
         setSyncCount(data.count);
-        fetchProducts(); // Refresh tabel setelah sync
+        fetchProducts();
       } else {
         setSyncStatus('error');
+        setErrorMessage(data.error || 'Unknown Error');
+        alert(`❌ ERROR DETAIL:\n\n${data.error}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       setSyncStatus('error');
+      setErrorMessage(e.message);
+      alert(`❌ SISTEM ERROR:\n\n${e.message}`);
     }
     setSyncing(false);
   };
@@ -67,7 +67,6 @@ export default function AdminProdukPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-800">Kelola Harga Produk</h1>
         
-        {/* Tombol Sinkronisasi */}
         <button 
           onClick={syncProducts} 
           disabled={syncing}
@@ -78,17 +77,19 @@ export default function AdminProdukPage() {
         </button>
       </div>
 
-      {/* Notifikasi Hasil Sinkronisasi */}
       {syncStatus === 'success' && (
         <div className="flex items-center gap-2 text-green-700 bg-green-50 p-4 rounded-xl border border-green-200">
           <CheckCircle2 className="w-5 h-5" />
-          <span>Berhasil! {syncCount} produk telah disinkronkan dari Digiflazz.</span>
+          <span>Berhasil! {syncCount} produk telah disinkronkan.</span>
         </div>
       )}
       {syncStatus === 'error' && (
-        <div className="flex items-center gap-2 text-red-700 bg-red-50 p-4 rounded-xl border border-red-200">
-          <AlertCircle className="w-5 h-5" />
-          <span>Gagal sinkronisasi. Pastikan API Key Digiflazz sudah benar di Vercel.</span>
+        <div className="flex flex-col gap-2 text-red-700 bg-red-50 p-4 rounded-xl border border-red-200">
+          <div className="flex items-center gap-2 font-bold">
+            <AlertCircle className="w-5 h-5" />
+            <span>Gagal Sinkronisasi</span>
+          </div>
+          <p className="text-sm font-mono bg-red-100 p-2 rounded">{errorMessage}</p>
         </div>
       )}
 

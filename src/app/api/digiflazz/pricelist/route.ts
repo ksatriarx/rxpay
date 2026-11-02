@@ -12,7 +12,7 @@ export async function GET() {
   const proxyUrl = process.env.FIXIE_URL;
   
   if (!username || !apiKey || !proxyUrl) {
-    return NextResponse.json({ success: false, error: 'Kredensial atau FIXIE_URL kosong di Vercel' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Variabel .env tidak lengkap (Cek Vercel Settings)' }, { status: 500 });
   }
 
   const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
@@ -26,11 +26,11 @@ export async function GET() {
       agent: agent as any,
     });
     
-    // PERBAIKAN: Tambahkan 'as any' di sini
     const data = await res.json() as any;
     
+    // Jika Digiflazz menolak
     if (!data.data) {
-      return NextResponse.json({ success: false, error: data.data || JSON.stringify(data) }, { status: 400 });
+      return NextResponse.json({ success: false, error: `Ditolak Digiflazz: ${JSON.stringify(data)}` }, { status: 400 });
     }
 
     const supabase = await createClient();
@@ -59,6 +59,6 @@ export async function GET() {
 
     return NextResponse.json({ success: true, count });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: `Gagal Koneksi Proxy: ${error.message}` }, { status: 500 });
   }
 }
