@@ -2,11 +2,17 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatIDR } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function AdminProdukPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loadingId, setLoadingId] = useState<number | null>(null);
+  
+  // State untuk Sinkronisasi
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle'|'success'|'error'>('idle');
+  const [syncCount, setSyncCount] = useState(0);
+
   const supabase = createClient();
 
   const fetchProducts = async () => {
@@ -22,7 +28,6 @@ export default function AdminProdukPage() {
     
     setLoadingId(id);
     
-    // LANGSUNG SIMPAN KE SUPABASE (Bypass API)
     const { error } = await supabase
       .from('products')
       .update({ sell_price: price })
@@ -34,13 +39,59 @@ export default function AdminProdukPage() {
       alert(`❌ GAGAL: ${error.message}`);
     } else {
       alert('✅ Harga berhasil diupdate!');
-      fetchProducts(); // Refresh data
+      fetchProducts();
     }
+  };
+
+  const syncProducts = async () => {
+    setSyncing(true);
+    setSyncStatus('idle');
+    try {
+      const res = await fetch('/api/digiflazz/pricelist');
+      const data = await res.json();
+      if (data.success) {
+        setSyncStatus('success');
+        setSyncCount(data.count);
+        fetchProducts(); // Refresh tabel setelah sync
+      } else {
+        setSyncStatus('error');
+      }
+    } catch (e) {
+      setSyncStatus('error');
+    }
+    setSyncing(false);
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Kelola Harga Produk</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h1 className="text-2xl font-bold text-slate-800">Kelola Harga Produk</h1>
+        
+        {/* Tombol Sinkronisasi */}
+        <button 
+          onClick={syncProducts} 
+          disabled={syncing}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold shadow-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Menarik Data...' : 'Sinkronisasi Produk'}
+        </button>
+      </div>
+
+      {/* Notifikasi Hasil Sinkronisasi */}
+      {syncStatus === 'success' && (
+        <div className="flex items-center gap-2 text-green-700 bg-green-50 p-4 rounded-xl border border-green-200">
+          <CheckCircle2 className="w-5 h-5" />
+          <span>Berhasil! {syncCount} produk telah disinkronkan dari Digiflazz.</span>
+        </div>
+      )}
+      {syncStatus === 'error' && (
+        <div className="flex items-center gap-2 text-red-700 bg-red-50 p-4 rounded-xl border border-red-200">
+          <AlertCircle className="w-5 h-5" />
+          <span>Gagal sinkronisasi. Pastikan API Key Digiflazz sudah benar di Vercel.</span>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
