@@ -10,7 +10,8 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() { return request.cookies.getAll(); },
-        setAll(cookiesToSet) {
+        // Tipe data ditambahkan di baris bawah ini:
+        setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
