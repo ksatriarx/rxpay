@@ -13,7 +13,6 @@ export async function GET() {
     const apiKey = process.env.DIGIFLAZZ_API_KEY;
     let fixieUrl = process.env.FIXIE_URL;
 
-    // DETEKTOR: Beritahu mana yang kosong
     if (!username || !apiKey || !fixieUrl) {
       return NextResponse.json({ 
         success: false, 
@@ -47,8 +46,13 @@ export async function GET() {
       }, { status: 500 });
     }
 
+    // PENGAMAN BARU: Cek apakah data.data ada dan merupakan array
     if (!data.data) {
-      return NextResponse.json({ success: false, error: `Ditolak Digiflazz: ${JSON.stringify(data)}` }, { status: 400 });
+      return NextResponse.json({ success: false, error: `Ditolak Digiflazz (Bukan array): ${JSON.stringify(data)}` }, { status: 400 });
+    }
+
+    if (!Array.isArray(data.data)) {
+      return NextResponse.json({ success: false, error: `Format aneh dari Digiflazz/Proxy: ${JSON.stringify(data).substring(0, 150)}` }, { status: 500 });
     }
 
     const supabase = await createClient();
@@ -63,13 +67,26 @@ export async function GET() {
       
       if (existingCodes.has(p.buyer_sku_code)) {
         await supabase.from('products').update({
-          product_name: p.product_name, category: p.category, brand: p.brand, type: p.type,
-          base_price: basePrice, seller_name: p.seller_name, is_active: true
+          product_name: p.product_name,
+          category: p.category,
+          brand: p.brand,
+          type: p.type,
+          base_price: basePrice,
+          seller_name: p.seller_name,
+          is_active: true
         }).eq('buyer_sku_code', p.buyer_sku_code);
       } else {
         await supabase.from('products').insert({
-          buyer_sku_code: p.buyer_sku_code, product_name: p.product_name, category: p.category, brand: p.brand, type: p.type,
-          base_price: basePrice, sell_price: basePrice + 1500, reseller_price: basePrice + 500, is_active: true, seller_name: p.seller_name,
+          buyer_sku_code: p.buyer_sku_code,
+          product_name: p.product_name,
+          category: p.category,
+          brand: p.brand,
+          type: p.type,
+          base_price: basePrice,
+          sell_price: basePrice + 1500,
+          reseller_price: basePrice + 500,
+          is_active: true,
+          seller_name: p.seller_name,
         });
       }
       count++;
