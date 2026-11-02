@@ -9,10 +9,11 @@ export const runtime = 'nodejs';
 export async function GET() {
   const username = process.env.DIGIFLAZZ_USERNAME;
   const apiKey = process.env.DIGIFLAZZ_API_KEY;
-  const proxyUrl = process.env.FIXIE_URL;
+  // PAKSA JADI HTTP:// (Ganti https:// jika ada)
+  const proxyUrl = (process.env.FIXIE_URL || '').replace('https://', 'http://');
   
   if (!username || !apiKey || !proxyUrl) {
-    return NextResponse.json({ success: false, error: 'Variabel .env tidak lengkap (Cek Vercel Settings)' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Variabel .env tidak lengkap' }, { status: 500 });
   }
 
   const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
@@ -28,7 +29,6 @@ export async function GET() {
     
     const data = await res.json() as any;
     
-    // Jika Digiflazz menolak
     if (!data.data) {
       return NextResponse.json({ success: false, error: `Ditolak Digiflazz: ${JSON.stringify(data)}` }, { status: 400 });
     }
