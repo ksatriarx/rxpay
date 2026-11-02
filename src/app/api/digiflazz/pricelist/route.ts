@@ -5,18 +5,18 @@ import fetch from 'node-fetch';
 import { HttpProxyAgent } from 'hpagent';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic'; // Mencegah build error saat prerender
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const username = process.env.DIGIFLAZZ_USERNAME;
     const apiKey = process.env.DIGIFLAZZ_API_KEY;
-    let proxyUrl = process.env.FIXIE_URL || '';
+    let rawProxyUrl = (process.env.FIXIE_URL || '').trim();
     
-    // Paksa ubah https ke http, dan pastikan tidak kosong
-    proxyUrl = proxyUrl.replace('https://', 'http://');
+    // Paksa bersihkan dan ubah https menjadi http
+    let proxyUrl = rawProxyUrl.replace('https://', 'http://');
     if (!proxyUrl.startsWith('http://')) {
-      return NextResponse.json({ success: false, error: 'URL Proxy tidak valid atau kosong' }, { status: 500 });
+        proxyUrl = 'http://' + rawProxyUrl.replace(/^(https?:\/\/)?/, '');
     }
     
     if (!username || !apiKey) {
@@ -24,14 +24,7 @@ export async function GET() {
     }
 
     const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
-    
-    // Buat agent dengan aman
-    let agent;
-    try {
-      agent = new HttpProxyAgent({ proxy: proxyUrl });
-    } catch (e: any) {
-      return NextResponse.json({ success: false, error: `Format Proxy Salah: ${e.message}` }, { status: 500 });
-    }
+    const agent = new HttpProxyAgent({ proxy: proxyUrl });
 
     const res = await fetch('https://api.digiflazz.com/v1/price-list', {
       method: 'POST',

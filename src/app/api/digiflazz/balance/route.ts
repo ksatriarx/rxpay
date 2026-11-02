@@ -10,19 +10,14 @@ export async function GET() {
   try {
     const username = process.env.DIGIFLAZZ_USERNAME!;
     const apiKey = process.env.DIGIFLAZZ_API_KEY!;
-    let proxyUrl = (process.env.FIXIE_URL || '').replace('https://', 'http://');
     
+    let rawProxyUrl = (process.env.FIXIE_URL || '').trim();
+    let proxyUrl = rawProxyUrl.replace('https://', 'http://');
     if (!proxyUrl.startsWith('http://')) {
-      return NextResponse.json({ error: 'URL Proxy tidak valid' }, { status: 500 });
+        proxyUrl = 'http://' + rawProxyUrl.replace(/^(https?:\/\/)?/, '');
     }
 
-    let agent;
-    try {
-      agent = new HttpProxyAgent({ proxy: proxyUrl });
-    } catch (e: any) {
-      return NextResponse.json({ error: `Format Proxy Salah: ${e.message}` }, { status: 500 });
-    }
-    
+    const agent = new HttpProxyAgent({ proxy: proxyUrl });
     const sign = crypto.createHash('md5').update(`${username}${apiKey}depo`).digest('hex');
 
     const res = await fetch('https://api.digiflazz.com/v1/cek-saldo', {
