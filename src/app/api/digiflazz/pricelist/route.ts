@@ -11,24 +11,21 @@ export async function GET() {
   try {
     const username = process.env.DIGIFLAZZ_USERNAME;
     const apiKey = process.env.DIGIFLAZZ_API_KEY;
-    const fixieUrl = process.env.FIXIE_URL;
+    let fixieUrl = process.env.FIXIE_URL;
 
+    // DETEKTOR: Beritahu mana yang kosong
     if (!username || !apiKey || !fixieUrl) {
-      return NextResponse.json({ success: false, error: 'Konfigurasi .env tidak lengkap' }, { status: 500 });
+      return NextResponse.json({ 
+        success: false, 
+        error: `Cek Vercel! Username: ${username ? 'OK' : 'KOSONG'}, API Key: ${apiKey ? 'OK' : 'KOSONG'}, Fixie URL: ${fixieUrl ? 'OK' : 'KOSONG'}` 
+      }, { status: 500 });
     }
 
-    // PERBAIKAN: Parsing URL Proxy secara manual dan aman
-    let formattedProxyUrl = fixieUrl.trim();
-    if (!formattedProxyUrl.startsWith('http://') && !formattedProxyUrl.startsWith('https://')) {
-      formattedProxyUrl = `http://${formattedProxyUrl}`;
+    if (!fixieUrl.startsWith('http://') && !fixieUrl.startsWith('https://')) {
+      fixieUrl = `http://${fixieUrl}`;
     }
     
-    // Parse URL dan encode password agar karakter '!' aman
-    const parsedProxy = new URL(formattedProxyUrl);
-    parsedProxy.password = encodeURIComponent(parsedProxy.password);
-    const safeProxyUrl = parsedProxy.toString();
-
-    const agent = new HttpsProxyAgent(safeProxyUrl);
+    const agent = new HttpsProxyAgent(fixieUrl);
     const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
 
     const res = await fetch('https://api.digiflazz.com/v1/price-list', {
@@ -40,14 +37,13 @@ export async function GET() {
 
     const rawText = await res.text();
     let data: any;
-
-    // Tampilkan error mentah jika proxy menolak
+    
     try {
       data = JSON.parse(rawText);
     } catch (e) {
       return NextResponse.json({ 
         success: false, 
-        error: `Proxy Error (HTTP ${res.status}). Cek IP Whitelist/Vercel. Pesan asli: ${rawText.substring(0, 100)}` 
+        error: `Proxy Error (HTTP ${res.status}). Pesan asli: ${rawText.substring(0, 100)}` 
       }, { status: 500 });
     }
 
@@ -56,8 +52,6 @@ export async function GET() {
     }
 
     const supabase = await createClient();
-    
-    // PERBAIKAN: Ambil daftar SKU yang sudah ada untuk mencegah duplikasi & menimpa harga
     const { data: existingProducts } = await supabase.from('products').select('buyer_sku_code');
     const existingCodes = new Set(existingProducts?.map(p => p.buyer_sku_code));
 
@@ -68,30 +62,14 @@ export async function GET() {
       const basePrice = p.price;
       
       if (existingCodes.has(p.buyer_sku_code)) {
-        // JIKA PRODUK SUDAH ADA: Update harga modal dan info saja. JANGAN sentuh sell_price!
         await supabase.from('products').update({
-          product_name: p.product_name,
-          category: p.category,
-          brand: p.brand,
-          type: p.type,
-          base_price: basePrice,
-          seller_name: p.seller_name,
-          is_active: true
+          product_name: p.product_name, category: p.category, brand: p.brand, type: p.type,
+          base_price: basePrice, seller_name: p.seller_name, is_active: true
         }).eq('buyer_sku_code', p.buyer_sku_code);
       } else {
-        // JIKA PRODUK BARU: Baru kita tentukan harga jual default (margin 1500)
-        const sellPrice = basePrice + 1500;
         await supabase.from('products').insert({
-          buyer_sku_code: p.buyer_sku_code,
-          product_name: p.product_name,
-          category: p.category,
-          brand: p.brand,
-          type: p.type,
-          base_price: basePrice,
-          sell_price: sellPrice,
-          reseller_price: basePrice + 500,
-          is_active: true,
-          seller_name: p.seller_name,
+          buyer_sku_code: p.buyer_sku_code, product_name: p.product_name, category: p.category, brand: p.brand, type: p.type,
+          base_price: basePrice, sell_price: basePrice + 1500, reseller_price: basePrice + 500, is_active: true, seller_name: p.seller_name,
         });
       }
       count++;
