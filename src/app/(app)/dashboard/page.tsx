@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { formatIDR } from '@/lib/utils';
-import { Wallet, Plus, Zap, Wifi, Smartphone, Gamepad2, Droplet, Tv, ArrowRight, History } from 'lucide-react';
+import { Wallet, Plus, Zap, Wifi, Smartphone, Gamepad2, Droplet, Tv, History } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -12,8 +13,8 @@ export default async function DashboardPage() {
     { name: 'Pulsa', icon: Smartphone, color: 'bg-blue-100 text-blue-600', href: '/produk?kategori=Pulsa' },
     { name: 'Paket Data', icon: Wifi, color: 'bg-purple-100 text-purple-600', href: '/produk?kategori=Paket Data' },
     { name: 'Token PLN', icon: Zap, color: 'bg-yellow-100 text-yellow-600', href: '/produk?kategori=Token Listrik' },
-    { name: 'E-Wallet', icon: Wallet, color: 'bg-green-100 text-green-600', href: '/produk?kategori=E-Money' },
-    { name: 'Game', icon: Gamepad2, color: 'bg-red-100 text-red-600', href: '/produk?kategori=Games' },
+    { name: 'E-Wallet', icon: Wallet, color: 'bg-green-100 text-green-600', href: '/produk?kategori=E-Wallet' },
+    { name: 'Game', icon: Gamepad2, color: 'bg-red-100 text-red-600', href: '/produk?kategori=Game' },
     { name: 'PDAM', icon: Droplet, color: 'bg-cyan-100 text-cyan-600', href: '/produk?kategori=PDAM' },
     { name: 'TV', icon: Tv, color: 'bg-orange-100 text-orange-600', href: '/produk?kategori=TV' },
     { name: 'Lainnya', icon: Plus, color: 'bg-slate-100 text-slate-600', href: '/produk' },
@@ -58,14 +59,20 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <Link href="/produk" className="block bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-between">
+      {/* BANNER PROMO DENGAN NEXT/IMAGE */}
+      <Link href="/produk" className="block relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow h-32 md:h-40">
+        <Image
+          src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800&h=200"
+          alt="Promo Cashback"
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-cover"
+          priority // Memuat gambar ini lebih dulu karena ada di atas layar
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent flex items-center p-6">
           <div>
-            <h4 className="font-bold text-slate-800 text-sm">Promo Cashback 10%</h4>
-            <p className="text-xs text-slate-500">Khusus transaksi pertamamu hari ini!</p>
-          </div>
-          <div className="w-10 h-10 bg-brand/10 rounded-full flex items-center justify-center text-brand">
-            <ArrowRight className="w-5 h-5" />
+            <h4 className="font-bold text-white text-lg md:text-xl mb-1">Promo Cashback 10%</h4>
+            <p className="text-white/80 text-sm">Khusus transaksi pertamamu hari ini!</p>
           </div>
         </div>
       </Link>
