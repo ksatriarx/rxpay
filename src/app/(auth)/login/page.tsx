@@ -52,7 +52,12 @@ export default function LoginPage() {
             {loading ? 'Memproses...' : 'Masuk Sekarang'}
           </button>
         </form>
-        <p className="text-center text-sm text-slate-500 mt-6">
+        
+        <div className="text-center mt-4">
+          <Link href="/forgot-password" className="text-sm text-slate-500 hover:text-brand">Lupa Password?</Link>
+        </div>
+
+        <p className="text-center text-sm text-slate-500 mt-2">
           Belum punya akun? <Link href="/register" className="text-brand font-semibold hover:underline">Daftar</Link>
         </p>
       </div>
