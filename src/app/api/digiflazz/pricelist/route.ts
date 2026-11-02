@@ -17,14 +17,11 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Variabel .env tidak lengkap' }, { status: 500 });
     }
 
-    // Bersihkan URL dan pastikan formatnya http://
     let cleanProxy = fixieUrl.trim().replace(/^https?:\/\//i, '');
     let finalProxyUrl = `http://${cleanProxy}`;
+    const agent = new HttpsProxyAgent(new URL(finalProxyUrl));
 
     const sign = crypto.createHash('md5').update(`${username}${apiKey}pricelist`).digest('hex');
-
-    // Gunakan https-proxy-agent dengan URL yang sudah diparsing
-    const agent = new HttpsProxyAgent(new URL(finalProxyUrl));
 
     const res = await fetch('https://api.digiflazz.com/v1/price-list', {
       method: 'POST',
@@ -33,7 +30,25 @@ export async function GET() {
       agent: agent as any,
     });
 
-    const data = await res.json() as any;
+    // BACA SEBAGAI TEKS DULU
+    const rawText = await res.text();
+    let data: any;
+
+    try {
+      // Coba parse langsung
+      data = JSON.parse(rawText);
+    } catch (parseError) {
+      // Jika gagal, bersihkan karakter aneh di awal/akhir
+      const cleanText = rawText.replace(/^\uFEFF/, '').replace(/^\s+/, '').replace(/\s+$/, '');
+      try {
+        data = JSON.parse(cleanText);
+      } catch (secondError: any) {
+        return NextResponse.json({ 
+          success: false, 
+          error: `Respons tidak valid. Isi mentah: "${rawText.substring(0, 100)}..."` 
+        }, { status: 500 });
+      }
+    }
 
     if (!data.data) {
       return NextResponse.json({ success: false, error: `Ditolak Digiflazz: ${JSON.stringify(data)}` }, { status: 400 });
