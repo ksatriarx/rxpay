@@ -83,8 +83,8 @@ export default function DepositPage() {
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-6">
           <p className="text-sm font-semibold text-brand mb-1">Transfer Ke Rekening:</p>
-          <p className="font-bold text-slate-800 text-lg">BCA: 1234567890</p>
-          <p className="text-sm text-slate-600">a.n. Teuku Fathahillah</p>
+          <p className="font-bold text-slate-800 text-lg">SeaBank: 901271940452</p>
+          <p className="text-sm text-slate-600">a.n. Teuku fathahillah</p>
           <p className="text-xs text-red-500 mt-2">*Pastikan nominal transfer sama persis dengan yang diinputkan.</p>
         </div>
 
