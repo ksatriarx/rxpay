@@ -12,7 +12,6 @@ export default function PulsaGrid({ products }: { products: any[] }) {
   const [successTx, setSuccessTx] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
   
-  // Dapatkan daftar brand unik
   const brands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
 
   useEffect(() => {
@@ -62,16 +61,16 @@ export default function PulsaGrid({ products }: { products: any[] }) {
     }
   };
 
-  // Helper untuk mengambil angka dari nama produk (misal "Telkomsel 10.000" jadi "10.000")
   const getNominal = (name: string, brand: string) => {
+    // Menghapus nama brand dari judul (misal "Telkomsel 10.000" jadi "10.000")
     return name.replace(new RegExp(brand, 'gi'), '').trim();
   };
 
   return (
     <div className="space-y-6">
-      {/* INPUT NOMOR HP DENGAN EFEK GLOW */}
-      <div className="relative p-[2px] rounded-2xl bg-gradient-to-r from-blue-300 via-purple-300 to-blue-300 shadow-sm">
-        <div className="bg-white rounded-[14px] p-4">
+      {/* KOTAK INPUT DENGAN EFEK GLOW GRADIENT */}
+      <div className="relative p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-300 via-purple-300 to-blue-300 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+        <div className="bg-white rounded-[14px] p-4 flex flex-col justify-center">
           <label className="block text-xs font-semibold text-slate-500 mb-1">Masukkan Nomor HP</label>
           <div className="flex items-center gap-3">
             <Smartphone className="w-6 h-6 text-slate-400" />
@@ -79,23 +78,23 @@ export default function PulsaGrid({ products }: { products: any[] }) {
               type="tel" 
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
-              className="w-full text-2xl font-bold text-slate-800 placeholder-slate-300 outline-none bg-transparent tracking-wide"
+              className="w-full text-2xl font-bold text-slate-800 placeholder-slate-300 outline-none bg-transparent tracking-widest"
               placeholder="08123456789" 
             />
           </div>
         </div>
       </div>
 
-      {/* TAB OPERATOR (PILL SHAPE) */}
+      {/* TAB KAPSUL (PILL) */}
       <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
         {brands.map((brand) => (
           <button
             key={brand}
             onClick={() => setDetectedBrand(brand)}
-            className={`px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+            className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-300 border ${
               detectedBrand === brand 
-                ? 'bg-brand-gradient text-white border-transparent shadow-md' 
-                : 'bg-white text-slate-500 border-slate-200'
+                ? 'bg-brand-gradient text-white border-transparent shadow-lg shadow-brand/30 scale-105' 
+                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
             }`}
           >
             {brand}
@@ -104,24 +103,24 @@ export default function PulsaGrid({ products }: { products: any[] }) {
       </div>
 
       {/* GRID PRODUK */}
-      <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {filteredProducts.map((p) => {
           const isSelected = selected?.id === p.id;
           return (
             <div 
               key={p.id} 
               onClick={() => { setSelected(p); setErrorMsg(''); }} 
-              className={`relative bg-white p-4 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all ${
+              className={`relative bg-white p-4 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
                 isSelected 
-                  ? 'ring-2 ring-purple-400 shadow-lg bg-purple-50/30' 
-                  : 'border border-slate-100 shadow-sm hover:border-brand'
+                  ? 'ring-2 ring-purple-400 bg-purple-50/40 shadow-md shadow-purple-200' 
+                  : 'border border-slate-100 shadow-sm hover:border-slate-300'
               }`}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex items-start gap-0.5">
                 <span className="font-extrabold text-slate-800 text-lg">
                   {getNominal(p.product_name, p.brand)}
                 </span>
-                <Zap className="w-4 h-4 text-blue-300 fill-blue-50" />
+                <Zap className="w-3.5 h-3.5 text-blue-300 fill-blue-100 mt-1" />
               </div>
               <span className="font-bold text-blue-600 text-sm mt-1">{formatIDR(p.sell_price)}</span>
             </div>
