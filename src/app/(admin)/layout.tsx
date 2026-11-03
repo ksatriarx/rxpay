@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { LayoutDashboard, Package, ReceiptText, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ReceiptText, LogOut, Users } from 'lucide-react';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -20,12 +20,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="font-bold text-xl">Admin Panel</span>
         </div>
         <nav className="flex-1 space-y-2">
-          <Link href="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 text-brand-light font-semibold"><LayoutDashboard className="w-5 h-5" /> Dashboard</Link>
-          <Link href="/admin/produk" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-300"><Package className="w-5 h-5" /> Harga Produk</Link>
-          <Link href="/admin/transaksi" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-300"><ReceiptText className="w-5 h-5" /> Semua Transaksi</Link>
+          <Link href="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"><LayoutDashboard className="w-5 h-5" /> Dashboard</Link>
+          <Link href="/admin/produk" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"><Package className="w-5 h-5" /> Harga Produk</Link>
+          <Link href="/admin/transaksi" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"><ReceiptText className="w-5 h-5" /> Transaksi</Link>
+          <Link href="/admin/users" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"><Users className="w-5 h-5" /> Pengguna</Link>
         </nav>
         <form action="/auth/logout" method="post">
-          <button className="flex items-center gap-3 text-red-400 font-semibold px-4 py-3 w-full hover:bg-slate-800 rounded-xl"><LogOut className="w-5 h-5" /> Keluar</button>
+          <button className="flex items-center gap-3 text-red-400 font-semibold px-4 py-3 w-full hover:bg-slate-800 rounded-xl transition-colors"><LogOut className="w-5 h-5" /> Keluar</button>
         </form>
       </aside>
 
@@ -44,9 +45,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       {/* Bottom Nav Mobile */}
       <nav className="md:hidden fixed bottom-0 w-full bg-slate-900 text-white flex justify-around py-3 z-50 rounded-t-2xl">
-        <Link href="/admin/dashboard" className="flex flex-col items-center gap-1 text-slate-300 hover:text-white"><LayoutDashboard className="w-5 h-5" /><span className="text-[10px]">Dashboard</span></Link>
-        <Link href="/admin/produk" className="flex flex-col items-center gap-1 text-slate-300 hover:text-white"><Package className="w-5 h-5" /><span className="text-[10px]">Produk</span></Link>
-        <Link href="/admin/transaksi" className="flex flex-col items-center gap-1 text-slate-300 hover:text-white"><ReceiptText className="w-5 h-5" /><span className="text-[10px]">Transaksi</span></Link>
+        <Link href="/admin/dashboard" className="flex flex-col items-center gap-1 text-slate-300 hover:text-white transition-colors">
+          <LayoutDashboard className="w-5 h-5" /><span className="text-[10px]">Dashboard</span>
+        </Link>
+        <Link href="/admin/produk" className="flex flex-col items-center gap-1 text-slate-300 hover:text-white transition-colors">
+          <Package className="w-5 h-5" /><span className="text-[10px]">Produk</span>
+        </Link>
+        <Link href="/admin/transaksi" className="flex flex-col items-center gap-1 text-slate-300 hover:text-white transition-colors">
+          <ReceiptText className="w-5 h-5" /><span className="text-[10px]">Transaksi</span>
+        </Link>
+        <Link href="/admin/users" className="flex flex-col items-center gap-1 text-slate-300 hover:text-white transition-colors">
+          <Users className="w-5 h-5" /><span className="text-[10px]">Pengguna</span>
+        </Link>
       </nav>
     </div>
   );
