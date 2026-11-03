@@ -28,10 +28,8 @@ export async function POST(req: Request) {
 
     if (!product || !profile) return NextResponse.json({ error: 'Data tidak ditemukan.' }, { status: 404 });
 
-    // LOGIKA RESELLER: Jika user adalah reseller dan punya harga reseller, pakai harga itu
-    const finalPrice = (profile.role === 'reseller' && product.reseller_price) 
-                        ? Number(product.reseller_price) 
-                        : Number(product.sell_price);
+    // Gunakan harga reseller jika ada
+    const finalPrice = (profile.role === 'reseller' && product.reseller_price) ? Number(product.reseller_price) : Number(product.sell_price);
 
     if (Number(profile.balance) < finalPrice) {
       return NextResponse.json({ error: `Saldo tidak mencukupi. (Butuh: Rp ${finalPrice})` }, { status: 400 });
@@ -92,6 +90,33 @@ export async function POST(req: Request) {
       });
       return NextResponse.json({ error: `Gagal: ${result.message}` }, { status: 400 });
     }
+
+    // --- LOGIKA KOMISI REFERRAL ---
+    // Jika user punya pengundang (referred_by) dan transaksi sukses
+    if (profile.referred_by && finalStatus === 'success') {
+      const commission = 100; // Komisi Rp 100 per transaksi sukses (bisa diubah nanti)
+      
+      // 1. Ambil data pengundang
+      const { data: referrer } = await adminSupabase.from('profiles').select('balance').eq('id', profile.referred_by).single();
+      
+      if (referrer) {
+        const newReferrerBalance = Number(referrer.balance) + commission;
+        
+        // 2. Tambah saldo pengundang
+        await adminSupabase.from('profiles').update({ balance: newReferrerBalance }).eq('id', profile.referred_by);
+        
+        // 3. Catat di mutasi saldo (Ledger) pengundang
+        await adminSupabase.from('balance_ledger').insert({
+          user_id: profile.referred_by,
+          transaction_id: tx.id,
+          type: 'referral_commission',
+          amount: commission,
+          balance_after: newReferrerBalance,
+          description: `Komisi referral dari transaksi downline (${profile.full_name})`
+        });
+      }
+    }
+    // ------------------------------
 
     return NextResponse.json({ success: true, tx: { ...tx, status: finalStatus, serial_number: result.sn } });
 
