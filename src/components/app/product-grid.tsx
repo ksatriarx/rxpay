@@ -1,37 +1,50 @@
 'use client';
 import { useState } from 'react';
 import { formatIDR } from '@/lib/utils';
-import { X, Search, CheckCircle2 } from 'lucide-react';
+import { X, CheckCircle2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 
-export default function ProductGrid({ products }: { products: any[] }) {
+export default function ProductGrid({ products, isReseller }: { products: any[], isReseller: boolean }) {
   const [selected, setSelected] = useState<any>(null);
   const [customerNo, setCustomerNo] = useState('');
   const [loading, setLoading] = useState(false);
   const [successTx, setSuccessTx] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Filter pencarian teks
   const filteredProducts = products.filter(p => 
     p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Fungsi untuk menentukan harga (Reseller vs Normal)
+  const getFinalPrice = (p: any) => {
+    return (isReseller && p.reseller_price) ? p.reseller_price : p.sell_price;
+  };
+
   const handleBuy = async () => {
-    if (!customerNo) return alert('Masukkan nomor tujuan / ID');
+    if (!customerNo) return toast.error('Masukkan nomor tujuan / ID');
     setLoading(true);
     
-    const res = await fetch('/api/transactions', {
-      method: 'POST',
-      body: JSON.stringify({ productId: selected.id, customerNo })
-    });
-    const data = await res.json();
-    setLoading(false);
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: selected.id, customerNo })
+      });
+      
+      const data = await res.json();
+      setLoading(false);
 
-    if (data.success) {
-      setSuccessTx(data.tx);
-      setCustomerNo('');
-    } else {
-      alert(data.error || 'Gagal memproses transaksi');
+      if (data.success) {
+        setSuccessTx(data.tx);
+        setCustomerNo('');
+        toast.success('Transaksi Berhasil!');
+      } else {
+        toast.error(data.error || 'Gagal memproses transaksi');
+      }
+    } catch (err) {
+      setLoading(false);
+      toast.error('Koneksi terputus.');
     }
   };
 
@@ -44,7 +57,7 @@ export default function ProductGrid({ products }: { products: any[] }) {
           placeholder="Cari produk atau operator..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:border-brand outline-none shadow-sm text-sm"
+          className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:border-brand outline-none shadow-sm text-sm bg-white"
         />
       </div>
 
@@ -53,20 +66,20 @@ export default function ProductGrid({ products }: { products: any[] }) {
           <div 
             key={p.id} 
             onClick={() => setSelected(p)} 
-            className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-brand transition-all cursor-pointer active:scale-95 flex flex-col justify-between"
+            className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-brand transition-all cursor-pointer active:scale-95 flex flex-col justify-between"
           >
             <div>
               <p className="text-[10px] font-bold text-brand mb-1 uppercase tracking-wider">{p.brand}</p>
               <p className="font-bold text-slate-800 text-sm mb-2 leading-tight">{p.product_name}</p>
             </div>
-            <p className="font-extrabold text-slate-900 mt-2">{formatIDR(p.sell_price)}</p>
+            <p className="font-extrabold text-slate-900 mt-2">{formatIDR(getFinalPrice(p))}</p>
           </div>
         ))}
       </div>
 
       {filteredProducts.length === 0 && (
         <div className="text-center py-10 text-slate-500 bg-white rounded-2xl border border-slate-100">
-          Produk tidak ditemukan untuk kategori ini.
+          Produk tidak ditemukan.
         </div>
       )}
 
@@ -79,7 +92,7 @@ export default function ProductGrid({ products }: { products: any[] }) {
             </button>
             <p className="text-xs font-bold text-brand mb-1 uppercase">{selected.brand}</p>
             <h3 className="font-bold text-lg mb-1">{selected.product_name}</h3>
-            <p className="text-brand font-bold text-xl mb-6">{formatIDR(selected.sell_price)}</p>
+            <p className="text-brand font-bold text-xl mb-6">{formatIDR(getFinalPrice(selected))}</p>
             
             <label className="block text-sm font-medium text-slate-700 mb-2">Nomor Tujuan / ID Game</label>
             <input 
@@ -90,7 +103,7 @@ export default function ProductGrid({ products }: { products: any[] }) {
               placeholder="Contoh: 08123456789" 
             />
             
-            <button onClick={handleBuy} disabled={loading} className="w-full py-3.5 bg-brand-gradient text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand/30">
+            <button onClick={handleBuy} disabled={loading} className="w-full py-3.5 bg-brand text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors disabled:opacity-50">
               {loading ? 'Memproses...' : 'Konfirmasi Pembelian'}
             </button>
           </div>
