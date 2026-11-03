@@ -10,13 +10,18 @@ export default function ProductGrid({ products, isReseller }: { products: any[],
   const [loading, setLoading] = useState(false);
   const [successTx, setSuccessTx] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeBrand, setActiveBrand] = useState('Semua');
 
-  const filteredProducts = products.filter(p => 
-    p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.brand.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Ambil daftar brand unik (misal: MOBILE LEGENDS, FREE FIRE)
+  const brands = ['Semua', ...Array.from(new Set(products.map(p => p.brand))).filter(Boolean)];
 
-  // Fungsi untuk menentukan harga (Reseller vs Normal)
+  // Filter berdasarkan tab brand dan pencarian
+  const filteredProducts = products.filter(p => {
+    const matchBrand = activeBrand === 'Semua' || p.brand === activeBrand;
+    const matchSearch = p.product_name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchBrand && matchSearch;
+  });
+
   const getFinalPrice = (p: any) => {
     return (isReseller && p.reseller_price) ? p.reseller_price : p.sell_price;
   };
@@ -50,17 +55,38 @@ export default function ProductGrid({ products, isReseller }: { products: any[],
 
   return (
     <>
+      {/* Kolom Pencarian */}
       <div className="relative mb-6">
         <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
         <input 
           type="text" 
-          placeholder="Cari produk atau operator..." 
+          placeholder="Cari produk..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:border-brand outline-none shadow-sm text-sm bg-white"
         />
       </div>
 
+      {/* Tab Filter Brand (Hanya muncul jika brand lebih dari 1) */}
+      {brands.length > 2 && (
+        <div className="flex overflow-x-auto gap-2 pb-4 scrollbar-hide mb-2">
+          {brands.map((brand) => (
+            <button
+              key={brand}
+              onClick={() => setActiveBrand(brand)}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors border ${
+                activeBrand === brand 
+                  ? 'bg-brand text-white border-brand' 
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              {brand}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Grid Produk */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {filteredProducts.map((p) => (
           <div 
@@ -99,8 +125,8 @@ export default function ProductGrid({ products, isReseller }: { products: any[],
               type="text" 
               value={customerNo} 
               onChange={(e) => setCustomerNo(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none mb-6 text-lg font-semibold"
-              placeholder="Contoh: 08123456789" 
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand outline-none mb-6 text-lg font-semibold"
+              placeholder="Masukkan ID / Nomor" 
             />
             
             <button onClick={handleBuy} disabled={loading} className="w-full py-3.5 bg-brand text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-brand-dark transition-colors disabled:opacity-50">
