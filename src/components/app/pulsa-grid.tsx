@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { formatIDR } from '@/lib/utils';
-import { X, Smartphone, CheckCircle2, AlertCircle, Share2, Loader2 } from 'lucide-react';
+import { X, Smartphone, CheckCircle2, AlertCircle, Share2, Loader2, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function PulsaGrid({ products }: { products: any[] }) {
   const [phone, setPhone] = useState('');
@@ -11,6 +12,7 @@ export default function PulsaGrid({ products }: { products: any[] }) {
   const [successTx, setSuccessTx] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
   
+  // Dapatkan daftar brand unik
   const brands = Array.from(new Set(products.map(p => p.brand))).filter(Boolean);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function PulsaGrid({ products }: { products: any[] }) {
   const filteredProducts = products.filter(p => p.brand === detectedBrand);
 
   const handleBuy = async () => {
-    if (!phone) return setErrorMsg('Masukkan nomor HP terlebih dahulu');
+    if (!phone) return toast.error('Masukkan nomor HP terlebih dahulu');
     setLoading(true);
     setErrorMsg('');
     
@@ -38,65 +40,102 @@ export default function PulsaGrid({ products }: { products: any[] }) {
         body: JSON.stringify({ productId: selected.id, customerNo: phone })
       });
       
-      // BACA SEBAGAI TEKS DULU (Untuk deteksi jika Vercel mengirim HTML crash)
       const rawText = await res.text();
       let data;
-
-      try {
-        data = JSON.parse(rawText);
-      } catch (e) {
-        // Jika bukan JSON, berarti server Vercel crash
-        throw new Error(`Server Crash (HTTP ${res.status}). Pesan: ${rawText.substring(0, 50)}...`);
-      }
+      try { data = JSON.parse(rawText); } 
+      catch (e) { throw new Error(`Server Crash (HTTP ${res.status}).`); }
 
       setLoading(false);
 
       if (data.success) {
         setSuccessTx(data.tx);
         setPhone('');
+        toast.success('Transaksi Berhasil!');
       } else {
         setErrorMsg(data.error || 'Gagal memproses transaksi');
+        toast.error('Transaksi Gagal');
       }
     } catch (err: any) {
       setLoading(false);
       setErrorMsg(err.message || 'Koneksi terputus.');
+      toast.error('Koneksi terputus');
     }
+  };
+
+  // Helper untuk mengambil angka dari nama produk (misal "Telkomsel 10.000" jadi "10.000")
+  const getNominal = (name: string, brand: string) => {
+    return name.replace(new RegExp(brand, 'gi'), '').trim();
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-        <label className="block text-sm font-bold text-slate-700 mb-2">Masukkan Nomor HP</label>
-        <div className="relative">
-          <Smartphone className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="tel" value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
-            className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand outline-none text-lg font-bold text-slate-800 tracking-wider"
-            placeholder="08123456789" 
-          />
+      {/* INPUT NOMOR HP DENGAN EFEK GLOW */}
+      <div className="relative p-[2px] rounded-2xl bg-gradient-to-r from-blue-300 via-purple-300 to-blue-300 shadow-sm">
+        <div className="bg-white rounded-[14px] p-4">
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Masukkan Nomor HP</label>
+          <div className="flex items-center gap-3">
+            <Smartphone className="w-6 h-6 text-slate-400" />
+            <input 
+              type="tel" 
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
+              className="w-full text-2xl font-bold text-slate-800 placeholder-slate-300 outline-none bg-transparent tracking-wide"
+              placeholder="08123456789" 
+            />
+          </div>
         </div>
-        {phone.length > 3 && <p className="text-xs font-semibold text-brand mt-2">Terdeteksi: {detectedBrand}</p>}
       </div>
 
-      <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+      {/* TAB OPERATOR (PILL SHAPE) */}
+      <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
         {brands.map((brand) => (
-          <button key={brand} onClick={() => setDetectedBrand(brand)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors border ${detectedBrand === brand ? 'bg-brand text-white border-brand shadow-md' : 'bg-white text-slate-600 border-slate-200'}`}>
+          <button
+            key={brand}
+            onClick={() => setDetectedBrand(brand)}
+            className={`px-6 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+              detectedBrand === brand 
+                ? 'bg-brand-gradient text-white border-transparent shadow-md' 
+                : 'bg-white text-slate-500 border-slate-200'
+            }`}
+          >
             {brand}
           </button>
         ))}
       </div>
 
+      {/* GRID PRODUK */}
       <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-        {filteredProducts.map((p) => (
-          <div key={p.id} onClick={() => { setSelected(p); setErrorMsg(''); }} 
-            className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm hover:border-brand transition-all cursor-pointer active:scale-95 flex flex-col items-center justify-center text-center">
-            <p className="font-extrabold text-slate-800 text-sm">{p.product_name.replace(new RegExp(detectedBrand, 'gi'), '').trim()}</p>
-            <p className="font-bold text-brand text-xs mt-1">{formatIDR(p.sell_price)}</p>
-          </div>
-        ))}
+        {filteredProducts.map((p) => {
+          const isSelected = selected?.id === p.id;
+          return (
+            <div 
+              key={p.id} 
+              onClick={() => { setSelected(p); setErrorMsg(''); }} 
+              className={`relative bg-white p-4 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all ${
+                isSelected 
+                  ? 'ring-2 ring-purple-400 shadow-lg bg-purple-50/30' 
+                  : 'border border-slate-100 shadow-sm hover:border-brand'
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                <span className="font-extrabold text-slate-800 text-lg">
+                  {getNominal(p.product_name, p.brand)}
+                </span>
+                <Zap className="w-4 h-4 text-blue-300 fill-blue-50" />
+              </div>
+              <span className="font-bold text-blue-600 text-sm mt-1">{formatIDR(p.sell_price)}</span>
+            </div>
+          );
+        })}
       </div>
 
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-10 text-slate-500 bg-white rounded-2xl border border-slate-100">
+          Produk untuk operator ini belum tersedia.
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI */}
       {selected && !successTx && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-end md:items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 relative shadow-2xl">
@@ -126,6 +165,7 @@ export default function PulsaGrid({ products }: { products: any[] }) {
         </div>
       )}
 
+      {/* MODAL SUKSES */}
       {successTx && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 text-center shadow-2xl">
