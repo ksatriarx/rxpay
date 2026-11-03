@@ -72,7 +72,7 @@ export default function AdminProdukPage() {
     e.preventDefault();
     if (!newProduct.buyer_sku_code || !newProduct.product_name) return toast.error('SKU dan Nama Produk wajib diisi');
     
-    setLoadingId(-1); // Indikator loading
+    setLoadingId(-1); 
     
     const { error } = await supabase.from('products').insert({
       buyer_sku_code: newProduct.buyer_sku_code.toUpperCase(),
@@ -171,7 +171,6 @@ export default function AdminProdukPage() {
         </div>
       </div>
 
-      {/* MODAL TAMBAH PRODUK MANUAL */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 relative shadow-2xl max-h-[90vh] overflow-y-auto">
